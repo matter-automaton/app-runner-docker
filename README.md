@@ -3,7 +3,7 @@
 
 A Docker app runner image.
 
-Based on [matter/app-base](https://bitbucket.org/hellomatter/docker-app-base), which is itself a mashup
+Based on [matter/app-base](https://github.com/matter-automaton/app-base-docker), which is itself a mashup
 of [phusion/baseimage](https://github.com/phusion/baseimage-docker)
 and the [heroku cedar-14 stack](https://github.com/heroku/stack-images).
 
