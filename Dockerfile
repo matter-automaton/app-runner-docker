@@ -27,12 +27,13 @@ RUN /etc/my_init.d/00_regen_ssh_host_keys.sh
 #    /etc/service/syslog-ng
 
 # Add a slugrunner script
-RUN curl -sf -o /sbin/slugrunner -L https://raw.githubusercontent.com/deis/deis/master/builder/slugrunner/runner/init
-#ADD ./slugrunner /sbin/slugrunner
+# RUN curl -sf -o /sbin/slugrunner -L \
+#    https://raw.githubusercontent.com/flynn/flynn/db73f2b1526226bd168ee2266d2a1389b7cb3fca/slugrunner/runner/init
+ADD ./slugrunner /sbin/slugrunner
 RUN chmod +x /sbin/slugrunner
 
 # Add ONBUILD to add the current directory as /app
-ONBUILD ADD . /app
+# ONBUILD ADD . /app
 
 
 

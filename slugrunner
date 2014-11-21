@@ -1,0 +1,90 @@
+#!/bin/bash
+## Load slug from Bind Mount, URL or STDIN
+
+##
+# Modified by iskandar@hellomatter.com:
+#  - Use RUNNER_USER and RUNNER_USER_ID env vars for setuidgid
+#  - Don't chown any files
+##
+
+set -eo pipefail
+
+export HOME=/app
+mkdir -p "${HOME}"
+
+export RUNNER_USER=${RUNNER_USER:-runner}
+export RUNNER_USER_ID=${RUNNER_USER_ID:-1000}
+
+# Add our user
+adduser --disabled-password --gecos '' --uid $RUNNER_USER_ID $RUNNER_USER 2>&1 >/dev/null || true
+adduser $RUNNER_USER sudo 2>&1 >/dev/null || true
+
+if [[ -n $(ls -A "${HOME}") ]]; then
+  true
+elif ! [[ -z "${SLUG_URL}" ]]; then
+  curl -s -L "${SLUG_URL}" | tar -xzC "${HOME}"
+  unset SLUG_URL
+else
+  cat | tar -xzC "${HOME}"
+fi
+cd "${HOME}"
+
+## Set home to $HOME
+
+usermod --home $HOME $RUNNER_USER
+
+## Load profile.d and release config
+
+shopt -s nullglob
+mkdir -p .profile.d
+if [[ -s .release ]]; then
+  ruby -e "require 'yaml';
+    (YAML.load_file('.release')['config_vars'] || {}).each do |k, v|
+      puts \"#{k}=\${#{k}:-'#{v}'}\"
+    end" \
+    > .profile.d/config_vars
+fi
+for file in .profile.d/*; do
+  source "${file}"
+done
+hash -r
+
+## Inject "start" command to run proces ses defined in Procfile
+
+case "$1" in
+  start)
+    if [[ -f Procfile ]]; then
+      command="$(ruby -e "require 'yaml';
+        puts YAML.load_file('Procfile')['$2']"
+      )"
+    else
+      command="$(ruby -e "require 'yaml';
+        puts (YAML.load_file('.release')['default_process_types'] || {})['$2']"
+      )"
+    fi
+    ;;
+  *)
+    command="$@"
+    ;;
+esac
+
+## Use sdutil to register with service discovery
+
+if [[ -n "${SD_NAME}" ]] && [[ -n "${PORT}" ]]; then
+  if [[ -n "${SD_HOST}" ]]; then
+    runner="sdutil exec -h ${SD_HOST} -s ${SD_NAME}:${PORT} bash -c"
+    unset SD_HOST
+  else
+    runner="sdutil exec -s ${SD_NAME}:${PORT} bash -c"
+  fi
+  unset SD_NAME
+elif [[ -n "${SD_ARGS}" ]]; then
+  runner="sdutil ${SD_ARGS} bash -c"
+  unset SD_ARGS
+else
+  runner="bash -c"
+fi
+
+## Run!
+
+setuidgid ${RUNNER_USER} ${runner} "${command}"
