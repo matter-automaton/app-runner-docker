@@ -29,6 +29,9 @@ else
 fi
 cd "${HOME}"
 
+# Ensure our runner user owns all of our application files
+chown -R ${RUNNER_USER} $HOME
+
 ## Set home to $HOME
 
 usermod --home $HOME $RUNNER_USER
@@ -43,6 +46,7 @@ if [[ -s .release ]]; then
       puts \"#{k}=\${#{k}:-'#{v}'}\"
     end" \
     > .profile.d/config_vars
+    chown -R ${RUNNER_USER} .profile.d/config_vars
 fi
 for file in .profile.d/*; do
   source "${file}"
