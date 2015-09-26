@@ -29,11 +29,7 @@ else
 fi
 cd "${HOME}"
 
-# Ensure our runner user owns all of our application files
-chown -R ${RUNNER_USER} $HOME
-
 ## Set home to $HOME
-
 usermod --home $HOME $RUNNER_USER
 
 ## Load profile.d and release config
